@@ -238,6 +238,38 @@ local function AugmentSearch()
     end
 end
 
+-- Settings sub-tabs: PPForever sizes them from the English label length
+-- (#label*7+20), so longer translations overflow. Re-lay them out from the
+-- rendered text width after every Select().
+local TAB_LEFT, TAB_SPACE = 220, 860
+local function RelayoutTabs(design)
+    if not enabled or type(design) ~= "table" or not design.active or type(design.entries) ~= "table" then return end
+    local group = design.active.group
+    local links, total = {}, 0
+    for _, e in ipairs(design.entries) do
+        if e.group == group and not e.retired and e.link and e.link.label then
+            local ok, width = pcall(e.link.label.GetStringWidth, e.link.label)
+            width = ok and type(width) == "number" and not Secret(width) and width or 0
+            links[#links + 1] = {entry = e, width = width}
+            total = total + width
+        end
+    end
+    if #links == 0 then return end
+    local pad = 20
+    if total + pad * #links > TAB_SPACE then pad = math.max(8, math.floor((TAB_SPACE - total) / #links)) end
+    local x = TAB_LEFT
+    for _, link in ipairs(links) do
+        local w = math.max(62, math.ceil(link.width) + pad)
+        local e = link.entry
+        e.link:ClearAllPoints(); e.link:SetPoint("TOPLEFT", x, -159); e.link:SetWidth(w)
+        if e.underline then e.underline:SetWidth(w - 8) end
+        x = x + w
+    end
+end
+if D.ConfigDesign and type(D.ConfigDesign.Select) == "function" then
+    hooksecurefunc(D.ConfigDesign, "Select", function(design) pcall(RelayoutTabs, design) end)
+end
+
 local function ScanAll()
     if not enabled then return end
     for _, name in ipairs(roots) do
@@ -248,12 +280,16 @@ local function ScanAll()
                 rootHooked[name] = true
                 root:HookScript("OnShow", function(self)
                     pcall(Walk, self, 0)
-                    if name == "DSPBuffsConfigWindow" then pcall(AugmentSearch) end
+                    if name == "DSPBuffsConfigWindow" then
+                        pcall(AugmentSearch)
+                        pcall(RelayoutTabs, D.ConfigDesign and D.ConfigDesign.current)
+                    end
                 end)
             end
         end
     end
     pcall(AugmentSearch)
+    pcall(RelayoutTabs, D.ConfigDesign and D.ConfigDesign.current)
 end
 ns.Translation.Scan = ScanAll
 
