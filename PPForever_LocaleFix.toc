@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: PP Forever - Locale Fix
+## Notes: Fixes camp-buff detection for non-English clients (Social and All-in-One buffing).
+## Author: Custom
+## Version: 1.0.0
+## Dependencies: PPForever
+PPForever_LocaleFix.lua
