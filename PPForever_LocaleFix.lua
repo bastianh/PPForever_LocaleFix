@@ -13,7 +13,7 @@
 --     skip covered players without the first failed cast.
 --
 -- /ppfix          status
--- /ppfix buffs    list your target's buff names (to find localized camp names)
+-- /ppfix buffs    show target's buffs in a copy window + save to SavedVariables
 -- /ppfix clear    forget all remembered rejections
 
 local D = DSPBuffData
@@ -143,6 +143,41 @@ HookAllInOne()
 
 local function Print(text) print("|cff66ccffPP Forever Locale Fix:|r " .. text) end
 
+-- WoW chat text cannot be selected. Show results in a copyable edit box and
+-- keep the last capture in SavedVariables (written on /reload or logout).
+local copyWindow
+local function ShowCopy(text)
+    if not copyWindow then
+        local w = CreateFrame("Frame", "PPForeverLocaleFixCopy", UIParent, "BackdropTemplate")
+        w:SetSize(460, 300); w:SetPoint("CENTER"); w:SetFrameStrata("DIALOG")
+        w:SetMovable(true); w:EnableMouse(true); w:RegisterForDrag("LeftButton")
+        w:SetScript("OnDragStart", w.StartMoving); w:SetScript("OnDragStop", w.StopMovingOrSizing)
+        if w.SetBackdrop then
+            w:SetBackdrop({bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+                edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+                tile = true, tileSize = 32, edgeSize = 24, insets = {left = 6, right = 6, top = 6, bottom = 6}})
+        end
+        local title = w:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        title:SetPoint("TOP", 0, -12); title:SetText("PP Forever Locale Fix - Ctrl+A, Ctrl+C")
+        local close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", -2, -2)
+        local scroll = CreateFrame("ScrollFrame", nil, w, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 14, -34); scroll:SetPoint("BOTTOMRIGHT", -32, 14)
+        local edit = CreateFrame("EditBox", nil, scroll)
+        edit:SetMultiLine(true); edit:SetAutoFocus(false); edit:SetFontObject(ChatFontNormal)
+        edit:SetWidth(400)
+        edit:SetScript("OnEscapePressed", function() w:Hide() end)
+        scroll:SetScrollChild(edit)
+        w.edit = edit
+        tinsert(UISpecialFrames, "PPForeverLocaleFixCopy")
+        copyWindow = w
+    end
+    copyWindow.edit:SetText(text)
+    copyWindow:Show()
+    copyWindow.edit:SetFocus()
+    copyWindow.edit:HighlightText()
+end
+
 SLASH_PPFOREVERLOCALEFIX1 = "/ppfix"
 SlashCmdList.PPFOREVERLOCALEFIX = function(input)
     input = (input or ""):lower():match("^%s*(.-)%s*$")
@@ -150,21 +185,30 @@ SlashCmdList.PPFOREVERLOCALEFIX = function(input)
         wipe(bounced); pending = nil; Refresh()
         Print("Remembered rejections cleared.")
     elseif input == "buffs" then
-        if D.Call(UnitExists, "target") ~= true then Print("No target.") return end
-        Print("Buffs on " .. (D.Call(UnitName, "target") or "target") .. ":")
+        local unit = D.Call(UnitExists, "target") == true and "target" or "player"
+        local who = D.Call(UnitName, unit) or unit
+        local lines = {"Buffs on " .. who .. " (" .. (GetLocale and GetLocale() or "?") .. "):"}
+        local capture = {target = who, locale = GetLocale and GetLocale(), time = date and date("%Y-%m-%d %H:%M"), buffs = {}}
         for i = 1, 40 do
-            local name, id
+            local name, id, icon
             if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-                local aura = D.Call(C_UnitAuras.GetAuraDataByIndex, "target", i, "HELPFUL")
+                local aura = D.Call(C_UnitAuras.GetAuraDataByIndex, unit, i, "HELPFUL")
                 if not aura then break end
-                name, id = aura.name, aura.spellId
+                name, id, icon = aura.name, aura.spellId, aura.icon
             else
-                local a, _, _, _, _, _, _, _, _, spellID = D.Call(UnitBuff, "target", i)
+                local a, tex, _, _, _, _, _, _, _, spellID = D.Call(UnitBuff, unit, i)
                 if not a then break end
-                name, id = a, spellID
+                name, id, icon = a, spellID, tex
             end
-            print(string.format("  %s (ID %s)", tostring(name), tostring(id)))
+            lines[#lines + 1] = string.format("%s | ID %s | icon %s", tostring(name), tostring(id), tostring(icon))
+            capture.buffs[#capture.buffs + 1] = {name = name, id = id, icon = icon}
         end
+        PPForeverLocaleFixDB = PPForeverLocaleFixDB or {}
+        PPForeverLocaleFixDB.captures = PPForeverLocaleFixDB.captures or {}
+        table.insert(PPForeverLocaleFixDB.captures, capture)
+        while #PPForeverLocaleFixDB.captures > 20 do table.remove(PPForeverLocaleFixDB.captures, 1) end
+        ShowCopy(table.concat(lines, "\n"))
+        Print(#capture.buffs .. " buffs captured (saved on /reload or logout).")
     else
         Prune()
         local active = 0

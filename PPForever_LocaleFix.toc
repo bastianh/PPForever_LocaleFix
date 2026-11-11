@@ -2,6 +2,7 @@
 ## Title: PP Forever - Locale Fix
 ## Notes: Fixes camp-buff detection for non-English clients (Social and All-in-One buffing).
 ## Author: Custom
-## Version: 1.0.0
+## Version: 1.0.1
 ## Dependencies: PPForever
+## SavedVariables: PPForeverLocaleFixDB
 PPForever_LocaleFix.lua

@@ -38,7 +38,7 @@ enable **PP Forever - Locale Fix** in the addon list and `/reload`.
 | Command        | Description                                                  |
 | -------------- | ------------------------------------------------------------ |
 | `/ppfix`       | Status: hook active, rejections seen, players currently skipped |
-| `/ppfix buffs` | List your target's buff names and IDs (to find localized camp buff names) |
+| `/ppfix buffs` | Show your target's (or your own) buff names, IDs and icons in a copyable window; also saved to `PPForeverLocaleFixDB` (SavedVariables) on `/reload` |
 | `/ppfix clear` | Forget all remembered rejections                             |
 
 ## Notes
