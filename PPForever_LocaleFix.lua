@@ -147,6 +147,27 @@ events:SetScript("OnEvent", function(_, event, arg1, arg2)
 end)
 HookAllInOne()
 
+-- 3) PPForever bug (all classes): social buffing waits while any group/self buff
+--    "needs refresh", using the refresh threshold (default 10 min). A buff whose
+--    full duration is not longer than that (Thorns: 10 min) needs refresh right
+--    after casting, so social buffing never starts. For this gate only, a buff is
+--    pending when missing or below GATE_MINUTES; normal refresh rules are unchanged.
+local GATE_MINUTES = 2
+if D.TargetBuff and type(D.TargetBuff.GroupPending) == "function" and D.Config and type(D.Config.Settings) == "function" then
+    local originalGroupPending = D.TargetBuff.GroupPending
+    D.TargetBuff.GroupPending = function(...)
+        local s = D.Config.Settings()
+        if type(s) ~= "table" then return originalGroupPending(...) end
+        local minutes, limit = s.buffRefreshMinutes, s.limitBuffRefresh
+        s.buffRefreshMinutes = math.min(minutes or 10, GATE_MINUTES)
+        s.limitBuffRefresh = true
+        local ok, result = pcall(originalGroupPending, ...)
+        s.buffRefreshMinutes, s.limitBuffRefresh = minutes, limit
+        if not ok then return true end
+        return result
+    end
+end
+
 local function Print(text) print("|cff66ccffPP Forever Locale Fix:|r " .. text) end
 
 -- WoW chat text cannot be selected. Show results in a copyable edit box and

@@ -29,6 +29,15 @@ It patches PP Forever from the outside, without modifying its files:
 
 Active for Paladins only (only blessings are blocked by camp buffs).
 
+## Social buffing never starts (all classes)
+
+PP Forever only offers social buffs when no group/self buff "needs refresh", using the
+refresh threshold (default 10 minutes). Buffs whose full duration is not longer than
+that – e.g. Druid **Thorns** (10 min) – count as needing refresh right after casting,
+so the social button stays on *"Your group or self buffs need attention first"* even
+when solo and fully buffed. For this check only, the addon treats a buff as pending
+when it is missing or below 2 minutes. Normal refresh rules are unchanged.
+
 ## UI translation (German)
 
 PP Forever has no localization system – all its text is hard-coded English. On a
