@@ -16,8 +16,11 @@
 -- /ppfix buffs    show target's buffs in a copy window + save to SavedVariables
 -- /ppfix clear    forget all remembered rejections
 
+local _, ns = ...
 local D = DSPBuffData
-if not D or D.PlayerClass ~= "PALADIN" or type(D.CampConflict) ~= "function" then return end
+if not D then return end
+-- The camp-buff fix only matters for blessings; the slash command works for all classes.
+local FIX = D.PlayerClass == "PALADIN" and type(D.CampConflict) == "function"
 
 local BOUNCE_SECONDS = 900
 
@@ -71,18 +74,20 @@ end
 
 -- 1) CampConflict: report a conflict for remembered rejections and for
 --    localized camp names, otherwise defer to PPForever's own check.
-local originalCampConflict = D.CampConflict
-D.CampConflict = function(unit, spell, ...)
-    if spell and not D.Combat() then
-        local guid = D.Call(UnitGUID, unit)
-        if IsBounced(guid, spell) then return true end
-        if LocalizedCampConflict(unit, spell) then return true end
+if FIX then
+    local originalCampConflict = D.CampConflict
+    D.CampConflict = function(unit, spell, ...)
+        if spell and not D.Combat() then
+            local guid = D.Call(UnitGUID, unit)
+            if IsBounced(guid, spell) then return true end
+            if LocalizedCampConflict(unit, spell) then return true end
+        end
+        return originalCampConflict(unit, spell, ...)
     end
-    return originalCampConflict(unit, spell, ...)
 end
 
 -- 2) Remember which blessing was just sent to whom.
-if D.SocialBuffs and type(D.SocialBuffs.Record) == "function" then
+if FIX and D.SocialBuffs and type(D.SocialBuffs.Record) == "function" then
     local originalRecord = D.SocialBuffs.Record
     D.SocialBuffs.Record = function(spell, guid, ...)
         Remember(spell, guid)
@@ -91,6 +96,7 @@ if D.SocialBuffs and type(D.SocialBuffs.Record) == "function" then
 end
 
 local function HookAllInOne()
+    if not FIX then return false end
     local button = _G.PPForeverTargetBuff
     if not button then return false end
     if button.ppLocaleFixHooked then return true end
@@ -181,7 +187,19 @@ end
 SLASH_PPFOREVERLOCALEFIX1 = "/ppfix"
 SlashCmdList.PPFOREVERLOCALEFIX = function(input)
     input = (input or ""):lower():match("^%s*(.-)%s*$")
-    if input == "clear" then
+    local tr = ns.Translation
+    if input == "lang" or input == "lang on" or input == "lang off" then
+        if not tr then Print("No translation available for client language " .. tostring(GetLocale and GetLocale()) .. ".") return end
+        local on = tr.Status()
+        if input == "lang on" then on = true elseif input == "lang off" then on = false else on = not on end
+        tr.SetEnabled(on)
+        if on then
+            tr.Scan()
+            Print("Übersetzung aktiv.")
+        else
+            Print("Translation disabled. /reload to restore all English text.")
+        end
+    elseif input == "clear" then
         wipe(bounced); pending = nil; Refresh()
         Print("Remembered rejections cleared.")
     elseif input == "buffs" then
@@ -213,8 +231,16 @@ SlashCmdList.PPFOREVERLOCALEFIX = function(input)
         Prune()
         local active = 0
         for _ in pairs(bounced) do active = active + 1 end
-        Print(string.format("active. All-in-One hooked: %s. Rejections seen: %d, currently skipped: %d.",
-            tostring(HookAllInOne()), hits, active))
-        Print("/ppfix buffs - list target buffs, /ppfix clear - reset.")
+        if FIX then
+            Print(string.format("active. All-in-One hooked: %s. Rejections seen: %d, currently skipped: %d.",
+                tostring(HookAllInOne()), hits, active))
+        else
+            Print("camp-buff fix inactive (Paladins only).")
+        end
+        if tr then
+            local on, locale, count, hookCount = tr.Status()
+            Print(string.format("translation %s (%s, %d strings, %d text hooks).", on and "on" or "off", locale, count, hookCount))
+        end
+        Print("/ppfix buffs - list target buffs, /ppfix clear - reset, /ppfix lang - toggle translation.")
     end
 end
