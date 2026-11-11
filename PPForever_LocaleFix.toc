@@ -3,9 +3,10 @@
 ## Notes: Fixes camp-buff detection for non-English clients and translates the PP Forever UI (deDE).
 ## Notes-deDE: Behebt die Lager-Buff-Erkennung auf nicht-englischen Clients und übersetzt die PP-Forever-Oberfläche.
 ## Author: Custom
-## Version: 1.1.1
+## Version: 1.2.0
 ## Dependencies: PPForever
 ## SavedVariables: PPForeverLocaleFixDB
 Locales\deDE.lua
 Translate.lua
+BuffLog.lua
 PPForever_LocaleFix.lua

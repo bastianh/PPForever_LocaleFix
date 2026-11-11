@@ -203,30 +203,33 @@ SlashCmdList.PPFOREVERLOCALEFIX = function(input)
         wipe(bounced); pending = nil; Refresh()
         Print("Remembered rejections cleared.")
     elseif input == "buffs" then
+        local Log = ns.BuffLog
         local unit = D.Call(UnitExists, "target") == true and "target" or "player"
         local who = D.Call(UnitName, unit) or unit
         local lines = {"Buffs on " .. who .. " (" .. (GetLocale and GetLocale() or "?") .. "):"}
-        local capture = {target = who, locale = GetLocale and GetLocale(), time = date and date("%Y-%m-%d %H:%M"), buffs = {}}
-        for i = 1, 40 do
-            local name, id, icon
-            if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-                local aura = D.Call(C_UnitAuras.GetAuraDataByIndex, unit, i, "HELPFUL")
-                if not aura then break end
-                name, id, icon = aura.name, aura.spellId, aura.icon
-            else
-                local a, tex, _, _, _, _, _, _, _, spellID = D.Call(UnitBuff, unit, i)
-                if not a then break end
-                name, id, icon = a, spellID, tex
-            end
-            lines[#lines + 1] = string.format("%s | ID %s | icon %s", tostring(name), tostring(id), tostring(icon))
-            capture.buffs[#capture.buffs + 1] = {name = name, id = id, icon = icon}
+        local buffs = Log and Log.ReadBuffs(unit) or {}
+        for _, b in ipairs(buffs) do
+            lines[#lines + 1] = string.format("%s | ID %s | icon %s", tostring(b.name), tostring(b.id), tostring(b.icon))
         end
-        PPForeverLocaleFixDB = PPForeverLocaleFixDB or {}
-        PPForeverLocaleFixDB.captures = PPForeverLocaleFixDB.captures or {}
-        table.insert(PPForeverLocaleFixDB.captures, capture)
-        while #PPForeverLocaleFixDB.captures > 20 do table.remove(PPForeverLocaleFixDB.captures, 1) end
+        if Log then Log.Collect(unit) end
         ShowCopy(table.concat(lines, "\n"))
-        Print(#capture.buffs .. " buffs captured (saved on /reload or logout).")
+        Print(#buffs .. " buffs (also added to the buff log).")
+    elseif input == "log" then
+        local Log = ns.BuffLog
+        if not Log then return end
+        local text, n = Log.Report()
+        ShowCopy(text)
+        Print(string.format("Buff log: %d buffs, collecting %s. Saved on /reload or logout.", n, Log.Enabled() and "on" or "off"))
+    elseif input == "log on" or input == "log off" then
+        if ns.BuffLog then ns.BuffLog.SetEnabled(input == "log on") end
+        Print("Buff log " .. (input == "log on" and "on." or "off."))
+    elseif input == "log clear" then
+        if ns.BuffLog then ns.BuffLog.Clear() end
+        Print("Buff log cleared.")
+    elseif input == "log quiet" or input == "log notify" then
+        PPForeverLocaleFixDB = PPForeverLocaleFixDB or {}
+        PPForeverLocaleFixDB.collectNotify = input == "log notify"
+        Print("New-buff chat notices " .. (input == "log notify" and "on." or "off."))
     else
         Prune()
         local active = 0
@@ -241,6 +244,10 @@ SlashCmdList.PPFOREVERLOCALEFIX = function(input)
             local on, locale, count, hookCount = tr.Status()
             Print(string.format("translation %s (%s, %d strings, %d text hooks).", on and "on" or "off", locale, count, hookCount))
         end
-        Print("/ppfix buffs - list target buffs, /ppfix clear - reset, /ppfix lang - toggle translation.")
+        if ns.BuffLog then
+            Print(string.format("buff log %s, %d buffs collected.", ns.BuffLog.Enabled() and "on" or "off", ns.BuffLog.Count()))
+        end
+        Print("/ppfix buffs - target buffs, /ppfix log - collected buffs (log on|off|clear|quiet|notify),")
+        Print("/ppfix clear - reset rejections, /ppfix lang - toggle translation.")
     end
 end

@@ -62,6 +62,18 @@ enable **PP Forever - Locale Fix** in the addon list and `/reload`.
 | `/ppfix buffs` | Show your target's (or your own) buff names, IDs and icons in a copyable window; also saved to `PPForeverLocaleFixDB` (SavedVariables) on `/reload` |
 | `/ppfix clear` | Forget all remembered rejections                             |
 | `/ppfix lang`  | Toggle the UI translation on/off (`lang on` / `lang off`)    |
+| `/ppfix log`   | Show the passive buff log in a copyable window               |
+| `/ppfix log on` / `off` / `clear` | Toggle or reset buff collection           |
+| `/ppfix log quiet` / `notify` | Turn chat notices for new Forever buffs off/on |
+
+## Buff log
+
+While you play, the addon records every buff on players you target or mouse over
+(and your own), keyed by spell ID: name, icon, how often and when it was seen, and on
+whom. NPCs are ignored. New Forever-specific buffs (spell IDs above 1,000,000, e.g.
+camp buffs) are announced once in chat. The log is stored in `PPForeverLocaleFixDB.buffLog`
+(SavedVariables, written on `/reload` or logout) and is used to find the localized
+names and IDs of camp buffs.
 
 ## Notes
 
